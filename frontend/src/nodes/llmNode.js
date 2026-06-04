@@ -1,34 +1,34 @@
 // llmNode.js
 
-import { Handle, Position } from 'reactflow';
+import { BaseNode } from './BaseNode';
 
-export const LLMNode = ({ id, data }) => {
+const config = {
+  title: 'LLM',
+  category: 'process',
+  headerIcon: '🤖',
+  inputs: [
+    { id: 'system', label: 'System' },
+    { id: 'prompt', label: 'Prompt' },
+  ],
+  outputs: [{ id: 'response', label: 'Response' }],
+  fields: [
+    {
+      type: 'select',
+      label: 'Model',
+      key: 'model',
+      options: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo', 'claude-3-opus', 'claude-3-sonnet'],
+      defaultValue: 'gpt-4o',
+    },
+    {
+      type: 'number',
+      label: 'Temperature',
+      key: 'temperature',
+      placeholder: '0.7',
+      min: 0,
+      max: 2,
+      defaultValue: '0.7',
+    },
+  ],
+};
 
-  return (
-    <div style={{width: 200, height: 80, border: '1px solid black'}}>
-      <Handle
-        type="target"
-        position={Position.Left}
-        id={`${id}-system`}
-        style={{top: `${100/3}%`}}
-      />
-      <Handle
-        type="target"
-        position={Position.Left}
-        id={`${id}-prompt`}
-        style={{top: `${200/3}%`}}
-      />
-      <div>
-        <span>LLM</span>
-      </div>
-      <div>
-        <span>This is a LLM.</span>
-      </div>
-      <Handle
-        type="source"
-        position={Position.Right}
-        id={`${id}-response`}
-      />
-    </div>
-  );
-}
+export const LLMNode = (props) => <BaseNode {...props} config={config} />;
