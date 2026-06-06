@@ -1,38 +1,14 @@
-// BaseNode.js — shared node shell used by all node types
-
 import { useState } from 'react';
 import { Handle, Position } from 'reactflow';
 
-const CATEGORY_COLORS = {
-  input:   { header: '#4f86c6', ring: '#2e6fad' },
-  output:  { header: '#5baa74', ring: '#3d8f5a' },
-  process: { header: '#9b72cb', ring: '#7a4faa' },
-  utility: { header: '#e08a3c', ring: '#c06a1e' },
-  default: { header: '#6b7280', ring: '#4b5563' },
+const CATEGORY_LABELS = {
+  input:   'Input',
+  output:  'Output',
+  process: 'Process',
+  utility: 'Utility',
+  default: null,
 };
 
-const FIELD_LABEL_STYLE = {
-  display: 'block',
-  fontSize: 11,
-  color: '#6b7280',
-  marginBottom: 2,
-  fontWeight: 500,
-  letterSpacing: '0.02em',
-};
-
-const FIELD_INPUT_STYLE = {
-  width: '100%',
-  padding: '4px 6px',
-  fontSize: 12,
-  border: '1px solid #d1d5db',
-  borderRadius: 4,
-  outline: 'none',
-  background: '#fff',
-  boxSizing: 'border-box',
-  color: '#1f2937',
-};
-
-// Calculates evenly-spaced percentage positions for n handles
 const getHandlePositions = (count) => {
   if (count === 1) return ['50%'];
   return Array.from({ length: count }, (_, i) =>
@@ -40,26 +16,36 @@ const getHandlePositions = (count) => {
   );
 };
 
-const FieldRenderer = ({ field, value, onChange }) => {
-  const inputStyle = { ...FIELD_INPUT_STYLE };
+const fieldStyle = {
+  width: '100%',
+  padding: '5px 8px',
+  fontSize: 12,
+  border: '1px solid #e5e7eb',
+  borderRadius: 6,
+  outline: 'none',
+  background: '#f9fafb',
+  boxSizing: 'border-box',
+  color: '#111827',
+  fontFamily: 'inherit',
+};
 
+const FieldRenderer = ({ field, value, onChange }) => {
   switch (field.type) {
     case 'text':
       return (
         <input
           type="text"
-          style={inputStyle}
+          style={fieldStyle}
           value={value ?? field.defaultValue ?? ''}
           placeholder={field.placeholder || ''}
           onChange={(e) => onChange(field.key, e.target.value)}
         />
       );
-
     case 'number':
       return (
         <input
           type="number"
-          style={inputStyle}
+          style={fieldStyle}
           value={value ?? field.defaultValue ?? ''}
           placeholder={field.placeholder || ''}
           min={field.min}
@@ -67,71 +53,50 @@ const FieldRenderer = ({ field, value, onChange }) => {
           onChange={(e) => onChange(field.key, e.target.value)}
         />
       );
-
     case 'textarea':
       return (
         <textarea
-          style={{ ...inputStyle, resize: 'vertical', minHeight: 56 }}
+          style={{ ...fieldStyle, resize: 'vertical', minHeight: 56 }}
           value={value ?? field.defaultValue ?? ''}
           placeholder={field.placeholder || ''}
           onChange={(e) => onChange(field.key, e.target.value)}
         />
       );
-
     case 'select':
       return (
         <select
-          style={inputStyle}
+          style={fieldStyle}
           value={value ?? field.defaultValue ?? field.options?.[0] ?? ''}
           onChange={(e) => onChange(field.key, e.target.value)}
         >
           {(field.options || []).map((opt) => {
-            const optValue = typeof opt === 'object' ? opt.value : opt;
-            const optLabel = typeof opt === 'object' ? opt.label : opt;
-            return (
-              <option key={optValue} value={optValue}>
-                {optLabel}
-              </option>
-            );
+            const v = typeof opt === 'object' ? opt.value : opt;
+            const l = typeof opt === 'object' ? opt.label : opt;
+            return <option key={v} value={v}>{l}</option>;
           })}
         </select>
       );
-
     case 'toggle':
       return (
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
           <div
             onClick={() => onChange(field.key, !value)}
             style={{
-              width: 32,
-              height: 18,
-              borderRadius: 9,
-              background: value ? '#4f86c6' : '#d1d5db',
-              position: 'relative',
-              transition: 'background 0.2s',
-              flexShrink: 0,
+              width: 32, height: 18, borderRadius: 9,
+              background: value ? '#374151' : '#d1d5db',
+              position: 'relative', transition: 'background 0.2s', flexShrink: 0,
             }}
           >
-            <div
-              style={{
-                position: 'absolute',
-                top: 2,
-                left: value ? 16 : 2,
-                width: 14,
-                height: 14,
-                borderRadius: '50%',
-                background: '#fff',
-                transition: 'left 0.2s',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-              }}
-            />
+            <div style={{
+              position: 'absolute', top: 2, left: value ? 16 : 2,
+              width: 14, height: 14, borderRadius: '50%',
+              background: '#fff', transition: 'left 0.2s',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            }} />
           </div>
-          <span style={{ fontSize: 12, color: '#374151' }}>
-            {value ? 'On' : 'Off'}
-          </span>
+          <span style={{ fontSize: 12, color: '#6b7280' }}>{value ? 'On' : 'Off'}</span>
         </label>
       );
-
     default:
       return null;
   }
@@ -144,98 +109,86 @@ export const BaseNode = ({ id, data, config, children }) => {
     fields = [],
     inputs = [],
     outputs = [],
-    width = 220,
+    width = 230,
     headerIcon,
   } = config;
 
-  // Build initial field state from data prop or defaultValues in config
-  const initialFieldState = {};
-  fields.forEach((f) => {
-    initialFieldState[f.key] = data?.[f.key] ?? f.defaultValue ?? '';
-  });
+  const initialState = {};
+  fields.forEach((f) => { initialState[f.key] = data?.[f.key] ?? f.defaultValue ?? ''; });
+  const [fieldValues, setFieldValues] = useState(initialState);
+  const handleChange = (key, value) => setFieldValues((prev) => ({ ...prev, [key]: value }));
 
-  const [fieldValues, setFieldValues] = useState(initialFieldState);
-
-  const handleFieldChange = (key, value) => {
-    setFieldValues((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS.default;
+  const badge = CATEGORY_LABELS[category];
   const inputPositions = getHandlePositions(inputs.length);
   const outputPositions = getHandlePositions(outputs.length);
 
   return (
-    <div
-      style={{
-        width,
-        background: '#fff',
-        border: `1.5px solid ${colors.ring}`,
-        borderRadius: 10,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-        fontFamily: 'Inter, system-ui, sans-serif',
-        overflow: 'visible',
-        minHeight: 60,
-      }}
-    >
+    <div style={{
+      width,
+      background: '#ffffff',
+      border: '1px solid #e5e7eb',
+      borderRadius: 14,
+      boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      overflow: 'visible',
+    }}>
       {/* Header */}
-      <div
-        style={{
-          background: colors.header,
-          borderRadius: '8px 8px 0 0',
-          padding: '7px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-        }}
-      >
-        {headerIcon && <span style={{ fontSize: 14 }}>{headerIcon}</span>}
-        <span
-          style={{
-            color: '#fff',
-            fontSize: 13,
-            fontWeight: 600,
-            letterSpacing: '0.01em',
-          }}
-        >
-          {title}
-        </span>
+      <div style={{
+        padding: '10px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottom: '1px solid #f3f4f6',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          {headerIcon && <span style={{ fontSize: 15 }}>{headerIcon}</span>}
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#111827', letterSpacing: '-0.01em' }}>
+            {title}
+          </span>
+        </div>
+        {badge && (
+          <span style={{
+            fontSize: 10, fontWeight: 500, color: '#6b7280',
+            background: '#f3f4f6', padding: '3px 9px',
+            borderRadius: 20, letterSpacing: '0.02em',
+          }}>
+            {badge}
+          </span>
+        )}
       </div>
 
       {/* Body */}
-      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {fields.map((field) => (
           <div key={field.key}>
-            <label style={FIELD_LABEL_STYLE}>{field.label}</label>
-            <FieldRenderer
-              field={field}
-              value={fieldValues[field.key]}
-              onChange={handleFieldChange}
-            />
+            <label style={{ display: 'block', fontSize: 11, color: '#9ca3af', marginBottom: 3, fontWeight: 500 }}>
+              {field.label}
+            </label>
+            <FieldRenderer field={field} value={fieldValues[field.key]} onChange={handleChange} />
           </div>
         ))}
-        {/* Slot for custom children (e.g. TextNode dynamic handles) */}
         {children}
       </div>
 
-      {/* Left handles — inputs (targets) */}
+      {/* Input handles (left) */}
       {inputs.map((handle, i) => (
         <Handle
           key={handle.id}
           type="target"
           position={Position.Left}
           id={`${id}-${handle.id}`}
-          style={{ top: inputPositions[i], background: colors.ring, width: 10, height: 10 }}
+          style={{ top: inputPositions[i], background: '#374151', width: 10, height: 10, border: '2px solid #fff' }}
         />
       ))}
 
-      {/* Right handles — outputs (sources) */}
+      {/* Output handles (right) */}
       {outputs.map((handle, i) => (
         <Handle
           key={handle.id}
           type="source"
           position={Position.Right}
           id={`${id}-${handle.id}`}
-          style={{ top: outputPositions[i], background: colors.ring, width: 10, height: 10 }}
+          style={{ top: outputPositions[i], background: '#374151', width: 10, height: 10, border: '2px solid #fff' }}
         />
       ))}
     </div>
